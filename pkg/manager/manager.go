@@ -19,34 +19,40 @@ type Manager struct {
 }
 
 func New(maxWorkers int) *Manager {
+
 	return &Manager{
 		maxWorkers: maxWorkers,
 		q:          make(chan Job, 1000),
 		done:       make(chan struct{}, maxWorkers),
 	}
+
 }
 
-func (m *Manager) Wake() {
+func (m Manager) Wake() {
 	go m.run()
 }
 
 func (m *Manager) run() {
 	for job := range m.q {
 		worker := m.worker()
-		go worker.Do(job)
 		m.workers++
+		go worker.Do(job)
 	}
+
 }
 
 func (m *Manager) worker() Worker {
+
 	if m.workers < m.maxWorkers {
 		return Worker{done: m.done}
 	} else {
 		<-m.done
+		m.workers--
 		return Worker{done: m.done}
 	}
+
 }
 
-func (m *Manager) Add(job Job) {
+func (m Manager) Add(job Job) {
 	m.q <- job
 }

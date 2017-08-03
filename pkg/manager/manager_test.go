@@ -1,19 +1,21 @@
 package manager
 
-import "testing"
-import "time"
+import (
+	"sync/atomic"
+	"testing"
+	"time"
+)
 
 func TestManager(t *testing.T) {
 	maxWorkers := 5
-	jobs := 50
+	jobs := 500
 
 	results := make(chan struct{})
 
 	manager := New(maxWorkers)
 
-	max := 0
-	current := 0
-	completed := 0
+	var max int32 = 0
+	var current int32 = 0
 
 	manager.Wake()
 
@@ -23,14 +25,15 @@ func TestManager(t *testing.T) {
 			func(i int) {
 
 				manager.Add(func() {
-					current++
-					if max < current {
-						max = current
+					atomic.AddInt32(&current, 1)
+
+					if atomic.LoadInt32(&max) < atomic.LoadInt32(&current) {
+						atomic.StoreInt32(&max, atomic.LoadInt32(&current))
 					}
+
 					time.Sleep(time.Millisecond * 100)
-					current--
-					completed++
 					t.Logf("completed #%d, current %d, max %d", i, current, max)
+					atomic.AddInt32(&current, -1)
 					results <- struct{}{}
 				})
 
@@ -46,12 +49,8 @@ func TestManager(t *testing.T) {
 
 		if resultsCount >= jobs {
 
-			if max != maxWorkers {
+			if max != int32(maxWorkers) {
 				t.Errorf("Incorrect concurrency. Expected %d got %d", maxWorkers, max)
-			}
-
-			if completed < jobs {
-				t.Errorf("Not all jobs completed. Expected %d got %d", jobs, completed)
 			}
 
 			return
