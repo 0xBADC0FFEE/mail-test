@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"flag"
-	"fmt"
 	"log"
 	"os"
 
@@ -51,9 +50,6 @@ func main() {
 				}
 
 				data, err := source.Get()
-				if err != nil {
-					println(fmt.Sprintf("Error getting data from %s: %v", path, err))
-				}
 
 				results <- Result{
 					Source: path,
